@@ -1,13 +1,13 @@
 from flask import Flask, request, render_template
 from PIL import Image, ImageFilter
 from pprint import PrettyPrinter
-# from dotenv import load_dotenv
+from dotenv import load_dotenv
 import json
 import os
 import random
 import requests
 
-# load_dotenv()
+load_dotenv()
 
 
 app = Flask(__name__)
@@ -144,18 +144,22 @@ def save_image(image, filter_type):
     return file_path
 
 
-def apply_filter(file_path, filter_name):
+def apply_filter(file_path, filter_type):
     """Apply a Pillow filter to a saved image."""
     i = Image.open(file_path)
     i.thumbnail((500, 500))
-    i = i.filter(filter_types_dict.get(filter_name))
+    i = i.filter(filter_types_dict.get(filter_type))
     i.save(file_path)
 
 @app.route('/image_filter', methods=['GET', 'POST'])
 def image_filter():
     """Filter an image uploaded by the user, using the Pillow library."""
     filter_types = filter_types_dict.keys()
-    filter_type = None
+    
+    file_path = None
+    image_url = None
+    filter_name = None
+
 
     if request.method == 'POST':
         
@@ -163,6 +167,8 @@ def image_filter():
         # as a variable
         # HINT: remember that we're working with a POST route here so which requests function would you use?
         filter_type = request.form.get('filter_type')
+        filter_name = filter_types_dict[filter_type]
+
         
         # Get the image file submitted by the user
         image = request.files.get('users_image')
@@ -179,9 +185,9 @@ def image_filter():
         context = {
             # TODO: Add context variables here for:
             # - The full list of filter types
+            'filter_types_dict': filter_types_dict,
             'filter_types': filter_types,
             'filter_type': filter_type,
-            'file_path': file_path,
             # - The image URL
             'image_url': image_url,
         }
@@ -191,10 +197,9 @@ def image_filter():
     else: # if it's a GET request
         context = {
             # TODO: Add context variable here for the full list of filter types
-            'filter_types': filter_types,
-            'filter_type': filter_type,
-            'file_path': file_path,
-            'image_url': image_url,
+          'filter_types_dict': filter_types_dict,
+          'filter_types': filter_types,
+          'filter_name': filter_name
         }
         return render_template('image_filter.html', **context)
 
@@ -213,17 +218,25 @@ Set up dotenv, create a .env file and define a variable
 API_KEY with a value that is the api key for your account. """
 
 API_KEY = os.getenv('API_KEY')
+# API_KEY = "AIzaSyC-2OG3waKRD77LS588MaWloweKFpe27Pg"
+
 print(API_KEY)
 
-TENOR_URL = 'https://api.tenor.com/v1/search'
+# TENOR_URL = 'https://api.tenor.com/v1/search'
+TENOR_URL = 'https://tenor.googleapis.com/v2/search'
+
 pp = PrettyPrinter(indent=4)
 
 @app.route('/gif_search', methods=['GET', 'POST'])
 def gif_search():
     """Show a form to search for GIFs and show resulting GIFs from Tenor API."""
+    print("**************************")
     if request.method == 'POST':
         # TODO: Get the search query & number of GIFs requested by the user, store each as a 
         # variable
+        search_query = request.form.get('search_query')
+        quantity = request.form.get('quantity')
+
 
         response = requests.get(
             TENOR_URL,
@@ -232,6 +245,9 @@ def gif_search():
                 # - 'q': the search query
                 # - 'key': the API key (defined above)
                 # - 'limit': the number of GIFs requested
+                'q': search_query,
+                'key': API_KEY,
+                'limit': quantity
             })
 
         gifs = json.loads(response.content).get('results')
@@ -245,7 +261,11 @@ def gif_search():
         # list of data. The media property contains a 
         # list of media objects. Get the gif and use it's 
         # url in your template to display the gif. 
-        # pp.pprint(gifs)
+        
+
+        pp.pprint(gifs)
+        print(API_KEY)
+        
 
         return render_template('gif_search.html', **context)
     else:
